@@ -5,6 +5,7 @@ agent: null
 ides_setup:
   - cursor
 expansion_packs:
+  - bmad-ai-first-dev
   - bmad-2d-phaser-game-dev
   - bmad-creator-tools
   - bmad-infrastructure-devops
