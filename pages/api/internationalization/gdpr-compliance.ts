@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
 
     // User Rights under GDPR
-    const userRights = {
+    const gdprUserRights = {
       rightToAccess: true,
       rightToRectification: true,
       rightToErasure: true,
@@ -69,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       region,
       gdprCompliant: true,
       compliance: gdprCompliance,
-      userRights,
+      userRights: gdprUserRights,
       processingRecords,
       consentManagement,
       timestamp: new Date().toISOString()

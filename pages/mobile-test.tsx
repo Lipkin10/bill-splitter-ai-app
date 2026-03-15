@@ -11,12 +11,25 @@ const MobileTest: React.FC<MobileTestProps> = () => {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [loadTime, setLoadTime] = useState(0);
+  const [networkStatus, setNetworkStatus] = useState('Online');
+
+  // Check if client-side
+  useEffect(() => {
+    setIsClient(true);
+    setLoadTime(Math.round(performance.now()));
+    setNetworkStatus(navigator.onLine ? 'Online' : 'Offline');
+  }, []);
 
   // Check if PWA is installed
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const checkPWAInstallation = () => {
       if (window.matchMedia('(display-mode: standalone)').matches) {
         setIsPWAInstalled(true);
+        setIsStandalone(true);
       }
     };
 
@@ -30,6 +43,7 @@ const MobileTest: React.FC<MobileTestProps> = () => {
 
   // Handle PWA install prompt
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -171,7 +185,7 @@ const MobileTest: React.FC<MobileTestProps> = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Tela Cheia:</span>
                 <span className="text-sm font-medium text-green-600">
-                  {window.matchMedia('(display-mode: standalone)').matches ? 'Sim' : 'Não'}
+                  {isStandalone ? 'Sim' : 'Não'}
                 </span>
               </div>
             </div>
@@ -242,13 +256,13 @@ const MobileTest: React.FC<MobileTestProps> = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {performance.now().toFixed(0)}ms
+                  {loadTime}ms
                 </div>
                 <div className="text-xs text-gray-500">Tempo de Carregamento</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {navigator.onLine ? 'Online' : 'Offline'}
+                  {networkStatus}
                 </div>
                 <div className="text-xs text-gray-500">Status da Rede</div>
               </div>

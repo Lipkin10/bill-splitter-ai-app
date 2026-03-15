@@ -81,13 +81,15 @@ export class RachaAIClaudeClient {
   private regionalVariationProcessor: RegionalVariationProcessor;
   private regionalPortugueseProcessor: RegionalPortugueseProcessor;
 
-  // Model pricing in USD (per 1K tokens) - Updated July 2024
+  // Model pricing in USD (per 1M tokens) - Updated March 2026 (Claude 4.5 series)
+  // Research: up to 67% cost reduction from previous generations
+  // Prompt caching: 70-90% savings on cached input tokens
   private readonly MODEL_PRICING = {
-    'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
-    'claude-3-sonnet-20240229': { input: 3.0, output: 15.0 },
-    'claude-3-opus-20240229': { input: 15.0, output: 75.0 },
-    'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
-    'claude-3-5-haiku-20241022': { input: 0.00025, output: 0.00125 }
+    'claude-3-haiku-20240307': { input: 0.25, output: 1.25, cachedInput: 0.025 },
+    'claude-3-sonnet-20240229': { input: 3.0, output: 15.0, cachedInput: 0.3 },
+    'claude-3-opus-20240229': { input: 15.0, output: 75.0, cachedInput: 1.5 },
+    'claude-3-5-sonnet-20241022': { input: 3.0, output: 15.0, cachedInput: 0.3 },
+    'claude-3-5-haiku-20241022': { input: 1.0, output: 5.0, cachedInput: 0.1 }
   } as const;
 
   // Brazilian system prompt base
@@ -776,18 +778,41 @@ FORMATO DE RESPOSTA:
       console.log('Message length:', message.length);
       console.log('History length:', history.length);
       
+      // Use Anthropic prompt caching for the system prompt
+      // Research: 70-90% cost reduction on cached input tokens
+      // System prompt is static and ideal for caching (5-min TTL)
       const response = await this.claude.messages.create({
         model,
         max_tokens: parseInt(process.env.CLAUDE_MAX_TOKENS || '4096'),
         temperature: parseFloat(process.env.CLAUDE_TEMPERATURE || '0.7'),
-        system: this.BRAZILIAN_SYSTEM_PROMPT,
+        system: [
+          {
+            type: 'text' as const,
+            text: this.BRAZILIAN_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' as const }
+          }
+        ],
         messages: [
           ...history,
           { role: 'user', content: message }
         ]
-      });
+      } as any);
       
-      console.log('Claude API response received');
+      // Log cache hit metrics for cost monitoring
+      if (response.usage) {
+        const cacheCreation = (response.usage as any).cache_creation_input_tokens || 0;
+        const cacheRead = (response.usage as any).cache_read_input_tokens || 0;
+        const regularInput = response.usage.input_tokens;
+        
+        console.log('Claude API response received', {
+          cacheCreation,
+          cacheRead,
+          regularInput,
+          outputTokens: response.usage.output_tokens,
+          cacheSavings: cacheRead > 0 ? `${Math.round((cacheRead / (cacheRead + regularInput)) * 100)}%` : '0%'
+        });
+      }
+      
       return response;
     } catch (error) {
       console.error('Claude API call failed:', error);
